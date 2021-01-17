@@ -1,0 +1,130 @@
+---
+title: "HW2 Solutions"
+author: "Alexander Cardazzi"
+date: "Quarantine, 2020"
+output:
+  html_document:
+    css: "format/buttonStyle.css"
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.align = "center")
+```
+
+**[All Materials Here](https://sites.google.com/view/alex-cardazzi/home/using-r)**
+
+Use the sharks dataset for this HW.  This should be more slightly more difficult than the first homework.  You will likely have to do some googling, but I have hinted some functions to look into.  After each line, try to view the data to see if the results of your code match what you wanted it to do.
+
+* Make a time series plot of the number of attacks per year.
+* Make a frequency distribution for the ages of those being attacked.
+* Plot the locations of the shark attacks.  Color the attacks by whether or not the attack was fatal.  Once this works, try and get fancy with the ```scales``` package.
+* Make a new binary variable for whether the attack was on the west coast. (hint, ```?ifelse```)
+* Make a binary variable for if the attack was unprovoked. (hint, ```?ifelse```)
+* Make a binary variable for if there was "No injury" or a "minor" injury (hint, look for these inside the text of the Injury column.  hint, ```?grepl```)
+* Make a binary variable for if the person attacked was male.  You may have to use both the Sex column and the Name column.
+* Make summary stats for the sharks data.
+* Use the binary variable for no injury or minor injury as your dependent variable.  Given an attack, what factors lead to more serious injuries?  Run a few regressions, have fun with it.
+* Is there a variable that significantly changes the sample size of your regressions? Why
+* Do you think these missing ages are [missing at random](https://www.ncbi.nlm.nih.gov/books/NBK493614/)?
+* Are serious injuries more or less likely given missingness for the variable?
+
+```{r, results = "hold"}
+library("stargazer")
+library("scales")
+rm(list = ls())
+
+sharks <- read.csv("C:/Users/alexc/Desktop/Empirical Workshop/data/sharks.csv", stringsAsFactors = FALSE)
+#View(sharks)
+```
+
+###1 - Make a time series plot of the number of attacks per year.
+```{r}
+timeSeries <- table(sharks$Year)
+plot(timeSeries, type = "l", ylab = "Frequency", xlab = "Year")
+```
+
+###2 - Make a frequency distribution for the ages of those being attacked.
+```{r}
+plot(table(as.numeric(sharks$Age)), ylab = "Frequncy", xlab = "Age")
+```
+
+###3 - Plot the locations of the shark attacks.  Color the attacks by whether or not the attack was fatal.
+```{r}
+sharks$fatalColor <- as.numeric(as.factor(sharks$Fatal..Y.N.))
+#plot(sharks$Longitude, sharks$Latitude, pch = 19, col = c(1,2))
+plot(sharks$Longitude, sharks$Latitude,
+     col = alpha(sharks$fatalColor, .1), pch = 19)
+
+
+```
+
+###4 - Make a new binary variable for whether the attack was on the west coast.
+```{r}
+sharks$westCoast <- ifelse(sharks$Longitude < -100, 1, 0)
+table(sharks$westCoast)
+```
+
+###5 - Make a binary variable for if the attack was unprovoked.
+```{r}
+table(sharks$Type)
+sharks$unprovoked <- ifelse(sharks$Type == "Unprovoked", 1, 0)
+table(sharks$unprovoked)
+```
+
+###6 - Make a binary variable for if there was "No injury" or a "minor" injury
+```{r}
+sharks$severe_injury <- ifelse(grepl("No injury", sharks$Injury) | grepl("minor", tolower(sharks$Injury)), 0, 1)
+table(sharks$severe_injury)
+```
+
+###7 - Make a binary variable for if the person attacked was male.
+```{r}
+sharks$Sex <- ifelse(sharks$Name == "female", "F", ifelse(sharks$Name == "male", "M", sharks$Sex))
+sharks$Sex <- ifelse(sharks$Sex == "", NA, sharks$Sex)
+sharks$male <- ifelse(is.na(sharks$Sex), NA, ifelse(sharks$Sex == "M", 1, 0))
+table(sharks$male)
+```
+
+###8 - Make summary stats for the sharks data.
+```{r}
+stargazer(sharks, type = "text")
+```
+
+###9 - Given an attack, what factors lead to more serious injuries?
+```{r}
+#exploring weather with these regressions
+reg1 <- lm(severe_injury ~ westCoast, data = sharks)
+reg2 <- lm(severe_injury ~ westCoast + Temperature + Precipitation + Wind.Speed + Visibility, data = sharks)
+reg3 <- lm(severe_injury ~ westCoast*Temperature + Precipitation + Wind.Speed + Visibility, data = sharks)
+stargazer(reg1, reg2, reg3,
+          type = "text", omit.stat = c("ser", "f"))
+
+#exploring the person/interaction
+reg1 <- lm(severe_injury ~ westCoast*Temperature + unprovoked, data = sharks)
+reg2 <- lm(severe_injury ~ westCoast*Temperature + male, data = sharks)
+reg3 <- lm(severe_injury ~ westCoast*Temperature + unprovoked + male, data = sharks)
+reg4 <- lm(severe_injury ~ westCoast*Temperature + unprovoked + male + as.numeric(Age), data = sharks)
+reg5 <- lm(severe_injury ~ westCoast*Temperature + unprovoked + male + as.numeric(Age) + Year, data = sharks)
+stargazer(reg1, reg2, reg3, reg4, reg5, 
+          add.lines = list(c("Year FE", rep("N", 4), "Y")),
+          type = "text", omit.stat = c("ser", "f"), omit = "Year")
+```
+
+###10 - Is there a variable that significantly changes the sample size of your regressions? Why
+```{r}
+#Including age decreases the the sample size by about 200.
+
+table(sharks$Age[is.na(as.numeric(sharks$Age))])
+#maybe we can start replacing teens with ~16, remove the "s" after some of these.  Still, 198 missing all together.
+```
+
+###12 - Are serious injuries more or less likely given missingness for the variable?
+```{r}
+lim <- is.na(as.numeric(sharks$Age))
+t.test(sharks$severe_injury[lim], sharks$severe_injury[!lim])
+t.test(sharks$westCoast[lim], sharks$westCoast[!lim])
+
+#So it appears that missing ages are less likely to be severly injured and more likely to be on the east coast.  Perhaps this is spurious, but it might be a signal of something non-random.
+```

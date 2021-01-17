@@ -1,0 +1,118 @@
+---
+title: "HW1 Solutions"
+author: "Alexander Cardazzi"
+date: "Quarantine, 2020"
+output:
+  html_document:
+    css: "format/buttonStyle.css"
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.align = "center")
+```
+
+<script src="format/hideOutput.js"></script>
+**[All Materials Here](https://sites.google.com/view/alex-cardazzi/home/using-r)**
+
+# Homework 1
+
+For this homework, use ```knicks.csv```.  Try your best not to "hard code" anything.  For example, there are 23 Knicks players, but try not to type the number 23 in your code.  This is to keep the script as flexible as possible, incase you had to repeat this code for a completely different roster list.  Use ```View(knicks)``` to look at the dataset.
+
+* Find the average weight of the Knicks roster.
+* Find the range of the weights.
+* Find the standard deviation of the weights.
+* Calculate the standard deviation of the weights *without* using either ```sd()``` or ```var()```.
+* Test if there is a significant difference in the weights of point guards & shooting guards relative to the rest of the players.  Hint: point guard = PG, shooting guard = SG in the Pos. column.
+* Test if guards (PG, SG) tend to have lower jersey numbers than other positions, but remove the centers (C).
+* Find the average experience of the players.
+* Generate a vector of the names of the 5 least heavy players
+* Generate a vector of the names of the 5 heaviest players
+* Drop the rows where players did not go to college or they are foreign.  Save this as ```knicks2```
+* Drop the College column from the dataset.
+* Check if there is a significant correlation between jersey number and experience.
+* Make a correlation matrix for weight, jersey number and experience.
+
+###1 - Find the average weight of the Knicks roster.
+```{r}
+knicks <- read.csv("C:/Users/alexc/Desktop/Empirical Workshop/data/knicks.csv", stringsAsFactors = FALSE)
+mean(knicks$Wt)
+```
+
+###2 - Find the range of the weights.
+```{r}
+max(knicks$Wt) - min(knicks$Wt)
+```
+
+###3 - Find the standard deviation of the weights.
+```{r}
+sd(knicks$Wt)
+```
+
+###4 - Calculate the standard deviation of the weights *without* using either ```sd()``` or ```var()```.
+```{r}
+numerator <- knicks$Wt - mean(knicks$Wt)
+numerator <- numerator^2
+numerator <- sum(numerator)
+
+denominator <- nrow(knicks) - 1
+
+sqrt(numerator / denominator) #could also do (numerator/denominator)^(1/2)
+```
+
+###5 - Test if there is a significant difference in the weights of point guards & shooting guards relative to the rest of the players.
+```{r}
+t.test(knicks$Wt[knicks$Pos %in% c("PG", "SG")],
+       knicks$Wt[!knicks$Pos %in% c("PG", "SG")])
+```
+
+###6 - Test if guards (PG, SG) tend to have lower jersey numbers than other positions, but remove the centers (C).
+```{r}
+t.test(knicks$No.[knicks$Pos %in% c("PG", "SG")],
+       knicks$No.[!knicks$Pos %in% c("PG", "SG", "C")])
+```
+
+###7 - Find the average experience of the players.
+```{r}
+mean(as.numeric(knicks$Exp), na.rm = TRUE); mean(ifelse(knicks$Exp == "R", 0, as.numeric(knicks$Exp)))
+```
+
+###8 - Generate a vector of the names of the 5 least heavy players
+```{r}
+knicks$Player[order(knicks$Wt)][1:5]
+```
+
+###9 - Generate a vector of the names of the 5 heaviest players
+```{r}
+knicks$Player[order(-knicks$Wt)][1:5]
+```
+
+###10 - Drop the rows where players did not go to college or they are foreign.  Save this as ```knicks2```
+```{r}
+knicks2 <- knicks[knicks$College != "" & knicks$X == "us",]
+knicks2 <- knicks[!(knicks$College == "" | knicks$X != "us"),]
+```
+
+###11 - Drop the College column from the dataset.
+```{r}
+knicks$X <- NULL
+#knicks <- knicks[,-7] #this is an example of hard coding ... what if another roster had extra columns?  Then you'd be deleting the wrong column
+#knicks <- knicks[,!colnames(knicks) == "X"]
+#knicks <- knicks[,-which(colnames(knicks) == "X")]
+#knicks <- knicks[,is.na(match(colnames(knicks), "X"))]
+```
+
+###12 - Check if there is a significant correlation between jersey number and experience.
+```{r}
+cor.test(knicks$No., as.numeric(knicks$Exp))
+```
+
+###13 - Make a correlation matrix for weight, jersey number and experience.
+```{r}
+knicks$Exp <- as.numeric(knicks$Exp)
+cor(knicks[!is.na(knicks$Exp),c("Wt", "No.", "Exp")])
+
+knicks$Exp <- ifelse(is.na(knicks$Exp), 0, knicks$Exp)
+cor(knicks[,c("Wt", "No.", "Exp")])
+```

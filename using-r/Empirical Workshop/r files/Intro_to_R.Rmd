@@ -1,0 +1,267 @@
+---
+title: "Introduction to R"
+author: "Alexander Cardazzi"
+date: "Quarantine, 2020"
+output:
+  html_document:
+    css: "format/buttonStyle.css"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.align = "center")
+```
+
+**[All Materials Here](https://sites.google.com/view/alex-cardazzi/home/using-r)**
+
+<script src="format/hideOutput.js"></script>
+
+
+<!-- echo=FALSE -->
+<!-- eval = FALSE -->
+
+
+<!-- <details><summary>Click here</summary> -->
+<!-- </details> -->
+
+
+#What is R?
+R is an open source (OSS), object oriented scripting language. It is mostly used by data scientists as an enviornment for statistical computing and graphics. Its source code is written in C, Fortran and R, though it stems from the mostly defunct language S. R, as a language, ranks 12th in terms of overall popularity (according to TIOBE 2019). Due to this, the answer to nearly any question you might have about R is on Google. Specifically, [Stack Overflow](https://stackoverflow.com/questions/tagged/r), [RStudio's Community Website](https://community.rstudio.com/), or a Reddit Community ( [r/rstats](https://www.reddit.com/r/rstats/), [r/Rlanguage](https://www.reddit.com/r/Rlanguage/) ) should have what you are looking for. The hardest part about programming is knowing *what* and *how* to google.
+
+For those of you who are curious, R is different from STATA in a few ways though ultimately minor.  In my opinion, R has a steeper learning curve but it is more flexible and powerful once you are over that hump.
+
+When using R, most people use RStudio.  I like to think of R as the brain and RStudio as the body.  It is likely that you will never use the default R GUI (Graphical User Interface) alone.
+
+#Download R
+To download R, follow [this link](https://cran.r-project.org/mirrors.html).  R asks that you to choose a location close to you when you download.  Then, you can select the R that works for your operating system.^[These tutorials assume you have Windows.  The differences in Mac, Windows, Linux mostly have to do with reading in data since file paths are different.  For example, in Windows, you might see a file path like ```C:/Users/alexc/Documents``` whereas on a Mac it might look like ```~/Documents```.  We will cover this later.]  Then, click on Install R for the first time.  Finally, Download whatever version of R is displayed.  **Download R before RStudio!**
+
+#Download RStudio####
+To download RStudio, go [here](https://rstudio.com/products/rstudio/download/#download).  This should detect what OS you have and make the appropriate suggestion.  However, in the event that the suggestion is incorrect, scrolling down will reveal other versions you can download.
+
+
+![](format/rstudio-windows.png)
+
+Here, we can see four distinct panels.  The bottom left is the console.  This is where you can view your code's output.  I also use this for "test code" I do not want in my saved file.  The top left is where you write code that you want to save, which we'll call a script.  The upper right is your enviornment (along with history and connections, which we will not discuss right now).  This is where you can see all the data you have loaded or created.  The bottom right is where you can view plots, view files and use the help functionality.  The help in R is an excellent start.
+
+To use help, type in a question mark and then the function you need with into the console and hit enter.  For example, type ```?mean``` and check out what pops up.  There will be information on Usage, Arguments, and Examples.
+
+#Data Structures####
+
+Some basic objects, or data structures, in R are as follows:
+
+* Logical: ```TRUE``` or ```FALSE```
+* Integers: ```0L, 1L, 2L, ..., .Machine$integer.max```
+* Doubles: ```.Machine$double.xmin, ..., 0, ..., .Machine$double.xmax```
+* Characters: ```"Alex", "Econometrics", "Radiohead"```
+* Factors: Think of these as categories.  Represented numerically in R.
+* Vectors: A collection of anything above, but all must be of the same type.
+* Matrices: A collection of vectors, all of the same type.
+* Lists: A collection of any of the previous objects, though does not have to be of the same type.
+* Data Frames: A more general form of a matrix, but a special case of a list.  Arguably the most used structure in R, especially for economists running regressions.
+* Missing, Empty Data: When data is *missing* it is displayed as ```NA``` and when data is *empty* it is ```NULL```.  ```NA``` values are extremely common in economic research data, and it is important to know how to handle these.
+
+#Logic
+Before the development of Object Oriented Programming (OOP), most notably C++, programming languages were more focused on logic instead of data.  Even now *with* OOP, logic plays a big part in how programs are written.  Here are some examples of how the "and" (```&```) and "or" (```|```) operators work in tandem with logical values.  Next, we can also use inequalities like in written math, and these will be evaluated the way you might expect.
+
+<!-- Keep in mind that a single ampersand and Sheffer stroke is a vectorized version of "and" and "or".  For the non-vectorized version, use ```&&``` and ```||```.  This is a minor detail and I hardly ever find myself ever using the non-vectorized version.   -->
+
+A note about the semicolon used throughout this tutorial: this is just so the code is more concise.  You do not *need* to end a line with a semicolon (like how you would in C++), but it allows you can put two lines onto one line if you separate them with a semicolon.  I only ever do this if I have multiple, short lines that "go together".  Here it is purely aesthetic.
+
+<div class="fold o">
+```{r}
+TRUE & TRUE; TRUE & FALSE; FALSE & FALSE;
+TRUE | TRUE; TRUE | FALSE; FALSE | FALSE;
+5 < 3; 5 > 3; 5 <= 3; 5 >= 3; 5 == 3; 5 != 3
+```
+</div>
+
+Hint: All numerical values, except 0, are coded as ```TRUE```.  I would hesitate using this unless you have binary variables that you have coded as 1/0 instead of TRUE/FALSE as it is unintuitive.
+
+<div class="fold o">
+```{r}
+1 & 5; 5 & 0
+```
+</div>
+
+#Arithmetic
+Since we aren't interested in just logic, we can also use R as a calculator.  An incredibly elaborate calculator, but a calculator nonetheless.  Typical mathematical operators are what you would expect in R.  +, -, \*, / are addition, subtraction, multiplication and division respectively.  Other useful operators are integer division (```%/%```) , modulo (```%%```), and exponents (```^``` or ```**```).  Integer division chops off the remainder after division and modulo returns the remainder after division.
+
+<div class="fold o">
+```{r}
+1 + 2; 3 - 4; 5 * 6; 7 / 8; 5%/%3; 5%%3
+```
+</div>
+
+#Variables / Objects
+Further, because we aren't necessarily interested in just incredibly elaborate calculators, we can explore how to store data in R.  Much like algebra, we can use characters, or strings of characters, to represent values.  We can do this with three operators: ```<-, ->, =```.  The first two are identical besides the way they "push" data, though the first is strictly more popular than the second.  The final one is different, but in a nuanced way which is beyond the scope of this tutorial.^[If you are interested, [a link](https://stackoverflow.com/questions/1741820/what-are-the-differences-between-and-in-r)]
+
+<div class="fold o">
+```{r}
+x <- 1 + 1; y <- 2 + 2
+print(x); print(y)
+
+#I am going to create a variable that is the sum of two other variables:
+x + y -> z; print(z)
+#notice how changing the value of x does not change z.  This may not be trivial but it is good to note.
+x <- 100; print(z)
+```
+</div>
+
+Typically, printing things in R is done with the ```print()``` function.  However, if one is working in RStudio, just calling the actual variable will print it to the console just the same.  Unless you are building a larger program that would require printing, this is not necessary to think about.  Though, often times, printing is a good debugging tool when developing any script.  Moreover, I encourage litering your scripts with print statements while you are learning.
+
+#Vectors
+Rarely do we work with single values.  Instead, we have collections of data, or variables, which we will consider vectors.  The first thing to know is ```c()```.  This stands for concatenate, and it is very important.  Essentially, it coerces multiple values into a vector.  The ```rep()``` function repeats the first agument passed the number of times specified by the second argument passed.  The ```seq()``` function creates a sequence between the first two arguments passed with the third arguement being the level of incrimentation.  Lastly, in this code block, we see how to subset vectors by indexing and by logic.
+
+
+<div class="fold o">
+```{r}
+#Note how we do not need to type every integer here by using the colon
+c(1, 2, 3, 4, 5); c(1:5)
+
+rep(1, 10); rep(c(1:5), 10)
+
+seq(1, 10, 2); seq(1, 10, .1)
+
+```
+</div>
+
+Now that we can make vectors, we will want to manipulate them.  We can do arithmetic and logical operations to vectors like we did to scalars before.
+
+<div class="fold o">
+``` {r}
+x <- c(1:5)
+x > 2; x + 2; x*3; x + x
+```
+</div>
+
+Suppose now that we have a long vector but only want to look at, modify, remove, etc. only certain elements.  We will use square brackets to do this.
+
+<div class="fold o">
+```{r}
+#Vector subsetting by indexing and logic
+y <- c(1:100)
+y[10:20] #by index, give me the 10th through 20th elements
+y[y < 5] #by logic, give me the elements of y where y is less than 5
+y[y %% 6 == 0] #by logic, give me the elements in y such that dividing them by 6 does not yield a remainder
+
+z <- c(x, y[90:100]); z #combining two vectors, x and a subset of y.
+```
+</div>
+
+As an example, we can run some of these operations inside square brackets alone and get vectors of logical values.  For example, we can use ```y %% 6 == 0``` and get 100 ```TRUE``` or ```FALSE``` values.  Sometimes, we want to know the indices where these are ```TRUE``` and we can use the ```which()``` function.  This is an important function.
+
+You might be able to see how this can become complicated.  For example, suppose we had 3 vectors: GDP, Country, and Continent, and we only want the GDP for countries in Europe.  It may look something like this:
+
+<div class="fold o">
+```{r}
+GDP <- c(47, 23, 61, 29, 80, 48, 92, 42)
+Country <- c("USA", "Italy", "Egypt", "Mexico", "Japan", "UK", "Germany", "Brazil")
+Continent <- c("NA", "EU", "AF", "NA", "AS", "EU", "EU", "SA")
+print(GDP[Continent == "EU"])
+```
+</div>
+
+I like to think of it like: "Give me GDP where/given Continent equals EU".  Talk to yourself when you program!  If you wanted continent to be equal to europe OR north america, this can be done like: ```Continent == "EU" | Continent == "NA"``` or ```Continent %in% c("EU", "NA")```.
+
+Overall, vectors are of extreme interest to us.  I want to take a moment to show some helpful, prebuilt statistical functions in R.  For example, we can use ```mean()```, ```sum()```, ```sd()```, ```var()```, ```summary()```, ```t.test()```, etc.  There are also normal distribution functions ```rnorm()```, ```qnorm()```, ```dnorm()```, and ```pnorm()```.
+
+<div class="fold o">
+```{r}
+N <- 100
+set.seed(789) #this is so we can replicate randomness
+x <- rnorm(N, mean = 1, sd = 4)
+y <- rnorm(N, mean = 0, sd = 4)
+summary(x)
+summary(y)
+t.test(x,y)
+```
+</div>
+
+#Matrices
+In the following section, we will learn a little bit about how matrix operations work in R.  Typically, most data is held in data frames, but first it is valuable to look into matrices.  We will begin with two vectors of 5 randomly generated numbers.
+
+<div class="fold o">
+```{r}
+#rnorm generates n numbers from a normal distribution ... use ?rnorm for help
+#rbind - combine by row, or stack on top
+#cbind - combine by column, or squish next to each other
+set.seed(456) #set.seed allows us to replicate randomness
+x1 <- rnorm(5); x1
+x2 <- rnorm(5); x2
+
+rbindEx <- rbind(x1, x2); rbindEx
+cbindEx <- cbind(x1, x2); cbindEx
+
+rbindEx * 10
+```
+</div>
+
+Now, we have created two matrices with our data.  You can transpose them (```t()```), multiply them (```%*%```) or invert them (```solve()```).  Instead of going too far into matrices, we're going to move onto lists.
+
+#Lists
+Lists are a super flexible way to collect things.  Here is an example of a list:
+```{r}
+
+x <- list(c("a", "b", "c"),
+          "d",
+          list(1,
+               c(2, 3),
+               "alex")
+          )
+```
+
+Here, my list ```x``` has three elements.  There is a character vector, a character element and then another list all together.  To access the elements of a list, we need a double square bracket like ```x[[1]]``` which will yield the entire vector ```c("a", "b", "c")```.  ```x[[1]][1]``` will yield ```"a"```.
+
+We can also name elements in a list and use these to access certain elements.^[This is a good example of when to use ```<-``` vs ```=```.  Take "balance" as an example.  The equal sign will make "balance" exist inside the list, but not in our Global Enviornment window pane.  Instead, I could have written ```balance <- c(5, 2, 3)``` but this would have saved balance inside the atm list **and** in our Global Enviornment.  Usually, this is not desired, but there may be occasions.]
+
+<div class="fold o">
+```{r}
+atm <- list(
+  
+  balance = c(5, 2, 3),
+  name = list(
+    first = c("alex", "bryan", "brad"),
+    last = c("cardazzi", "mccannon", "humphreys")
+    ),
+  favoriteSport = c("basketball", "nascar", "wvu football")
+  )
+
+atm$favoriteSport
+atm$name$first
+atm[[2]][[1]]
+```
+</div>
+
+You might imagine taking this list and converting it into something that looks like a table.  This is where data frames come in.
+
+#Data Frames
+
+Data frames are just a special case of a list.  In a data frame, you should think of a matrix, or an excel sheet, where each column has a name.  Typically, we read in data from CSV, Excel, JSON files, etc.  In this tutorial, I will strictly use CSV files.  [Here](https://knowledgebase.constantcontact.com/articles/KnowledgeBase/6409-saving-an-excel-file-as-a-csv-file?lang=en_US) is how to save your excel files as CSVs if you are unsure how.  I am going to use this file called ```knicks.csv``` and it can be found [here](https://www.basketball-reference.com/teams/NYK/2019.html#roster).  We will talk more about reading data into R later.
+
+<div class="fold o">
+```{r}
+knicks <- read.csv("C:/Users/alexc/Desktop/Empirical Workshop/data/knicks.csv", stringsAsFactors = FALSE)
+dim(knicks) #returns the rows and columns of a data frame
+head(knicks) #head will display the first 6 rows just so you can take a peak at the data
+```
+</div>
+
+We used square brackets when subsetting vector, and we will do the same here.  However, there are two dimensions (rows and columns) as opposed to the one dimensional vectors before.  To obtain just the weight column, we can do ```knicks$Wt```.  To get the weight of players who did not attend college, we can do ```knicks$Wt[knicks$College == ""]```.  Note the column ```knicks$Exp```.  There are numbers but all of them have quotes around them.  This is because some players have an "R" in their row, which means the player is a rookie and this is their first year in the NBA.  In other words, if there is a vector of all numeric elements and one character elements, the whole vector will be converted to a character.  You can force a vector to be numeric by ```as.numeric()```.  Here, the "R" will be removed for an ```NA```, since the program can turn ```"9"``` into ```9```, but gets confused trying to convert ```"R"``` into a number.
+
+# Homework 1
+
+For this homework, use ```knicks.csv```.  Try your best not to "hard code" anything.  For example, there are 23 Knicks players, but try not to type the number 23 in your code.  This is to keep the script as flexible as possible, incase you had to repeat this code for a completely different roster list.  Use ```View(knicks)``` to look at the dataset.
+
+* Find the average weight of the Knicks roster.
+* Find the range of the weights.
+* Find the standard deviation of the weights.
+* Calculate the standard deviation of the weights *without* using either ```sd()``` or ```var()```.
+* Test if there is a significant difference in the weights of point guards & shooting guards relative to the rest of the players.  Hint: point guard = PG, shooting guard = SG in the Pos. column.
+* Test if guards (PG, SG) tend to have lower jersey numbers than other positions, but remove the centers (C).
+* Find the average experience of the players.
+* Generate a vector of the names of the 5 least heavy players
+* Generate a vector of the names of the 5 heaviest players
+* Drop the rows where players did not go to college or they are foreign.  Save this as ```knicks2```
+* Drop the College column from the dataset.
+* Check if there is a significant correlation between jersey number and experience.
+* Make a correlation matrix for weight, jersey number and experience.

@@ -1,0 +1,454 @@
+---
+title: "Regressions in R"
+author: "Alexander Cardazzi"
+date: "Quarantine, 2020"
+output:
+  html_document:
+    css: "format/buttonStyle.css"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.align = "center")
+```
+
+<script src="format/hideOutput.js"></script>
+**[All Materials Here](https://sites.google.com/view/alex-cardazzi/home/using-r)**
+
+# Setting Up R for Use
+
+When you open up a blank RScript, there are a few things you may want to put at the very top of your code.  I like to lead with any libraries I will need.  While there are a lot of things you can do with base R, people write packages to make our lives easier.  For example, here is a list of a few packages I use in almost all of my scripts:
+
+* ```lubridate```: this package is for working with date objects.  Dates are not always easy to work with but I cannot recommend this package enough.  [Cheatsheet](https://rawgit.com/rstudio/cheatsheets/master/lubridate.pdf).
+* ```stargazer```: this package makes regression output beautiful and simple.  [Cheatsheet](https://www.jakeruss.com/cheatsheets/stargazer/).
+* ```data.table```: this is for reading in large CSVs.^[look into readRDS and saveRDS.  Essentially, this saves an R object to your file directory.  This provides two benefits over a CSV: it is zipped so much smaller and R can read the data in way quicker than a CSV.  Drawback is you cannot open with Excel or Notepad.  Should be used for LARGE datasets.]
+* ```scales```: this is for changing the opacity of plot colors.  Purely aesthetic, but I love it.
+
+Note that before you load a library (```library("scales")```), you need to install the library (```install.packages("scales")```).  Installing packages only has to be done the very first time you use a package, then it will be on your machine forever.
+
+Next, I try to always set up a working directory.  Suppose you have a folder for your project, and lets say that file path is: ```C:/Users/alexc/Dropbox/sharkAttacks```.  Within this folder, I might have subfolders like raw_data, cleaned_data, literature, code, etc.  It is likely that I'll want to save my script in the code folder but read/write data to the raw_data/cleaned_data folders.  To make this simple, I can do this:
+
+```{r, eval = FALSE}
+setwd("C:/Users/alexc/Dropbox/sharkAttacks/")
+#read in data
+
+# do stuff ...
+
+setwd("../cleaned_data")
+#write out data
+```
+
+This allows for more "flexible" code since we only specify the filepath once.  Notice how I used "../cleaned_data" in the second ```setwd()```.  These two dots mean "go back one level".  This tells the computer to back out of the raw_data folder and go inside the cleaned_data folder.  If you are unsure of your working directory, you can use ```getwd()``` to see what R is currently using.
+
+The last thing is to read in the datasets you need.  Suppose we are looking at auction data.  We may have one file that has four columns: bid amount, a timestamp, item ID and bidder ID.  Then, we might have another file with information about each item, like retail price, country of origin, etc. and a file with information about the bidders like age, experience, wealth, etc.  I made up some data and threw it into some CSVs.  The header of my script should look like this:
+
+```{r, message = FALSE}
+#library("enter library here")
+
+setwd("C:/Users/alexc/Desktop/Empirical Workshop/data/bidding data")
+rm(list = ls()) #this clears my workspace ... be careful with this
+
+bidz <- read.csv("bids.csv", stringsAsFactors = FALSE)
+itemz <- read.csv("items.csv", stringsAsFactors = FALSE)
+ppl <- read.csv("bidders.csv", stringsAsFactors = FALSE)
+```
+
+You can check out the data by clicking on the object in the Enviornment tab, or typing ```View(bidz)``` into the console.  Before we get too much farther, we need to explore the data.  Here is a list of some invaluable functions.  Mastering these few functions take you from level 1 to level 2, and can save you hours of time.
+
+* ```table()```
+* ```aggregate()```
+* ```match()```
+
+First, in the ```bidz``` data frame, we might want to see how many bids each item got.  We can easily do this by calling:
+
+<div class="fold o">
+```{r}
+table(bidz$itemID)
+```
+</div>
+
+Instead, maybe we care about the number of bids per item, per person.  This is easily done by just adding a second argument to the function.
+
+<div class="fold o">
+```{r}
+table(bidz$itemID, bidz$bidderID)
+```
+</div>
+
+Now that we have an idea of how many bids there are and where they are located, we may want to know the average bid.  However, since things at an auction can be vastly different prices, we might want to find the average by some identifier.  In this case, we want the average big per item.
+
+<div class="fold o">
+```{r}
+aggregate(bidz$bid, by = list(bidz$itemID), FUN = mean)
+```
+</div>
+
+Instead, maybe we want to observe a rough estimate of revealed preferences.  How much does each person value each item?  Let's take the max of the bids per item per person.  There is an important nuance to note with this, however.  While ```table()``` reports zero values (for example, person b did not bet on item 16302 thus the frequency of this is zero), aggregate is unable to do this. In our case of revealed preferences, one might infer a value of 0 given someone never bidding on an item.
+
+<div class="fold o">
+```{r}
+aggregate(bidz$bid, by = list(bidz$itemID, bidz$bidderID), FUN = max)
+```
+</div>
+
+What if we want to pull information from another dataset into the bids dataset?  For example, what if we want to look at retail price minus bid price for each bid?  We need to pull in the retail price from the itemz table.  To do this, we need to match the itemIDs, and get the retail price where these match.
+
+<div class="fold o">
+```{r}
+bidz$itemID; itemz$itemID
+match(bidz$itemID, itemz$itemID) #this gives the location of each element of bidz$id in itemz$itemID
+itemz$retail[match(bidz$itemID, itemz$itemID)] #reorder the itemz$retail vector to associate with the matching of bidz$id into itemz$itemID
+bidz$diff <- itemz$retail[match(bidz$itemID, itemz$itemID)] - bidz$bid #subtraction
+bidz[,c("itemID", "bid", "diff")] #print these three columns
+```
+</div>
+
+These are some really important things in R.  I would encourage you to go over this a few times and really understand what is going on.  The power of these three functions cannot be overstated.
+
+# Plotting
+
+One of the main selling points of R is its extremely powerful graphical capabilities.  People online love to use a library called ```ggplot2```, but I prefer using base R plotting.  I say this as it might be of interest for you to look into that package.  You can check out all the possible arguments for ```plot()```, our workhorse, by using the help function, but here are some of the main, most important ones:
+
+* type: "l" = line, "p" = point, "b" = both, "h" = histogram
+* col: Color argument. 8 pages of colors [here](http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf)
+* pch: Point type. I use 19 for solid dots, 4 for an 'x' and [more here](https://www.kindpng.com/picc/m/32-323837_r-plot-pch-symbols-calligraphy-hd-png-download.png)
+* cex: Point size. I usually just use 1.
+* lty: Line tpye. I use 1 for solid lines, 2 for dashed lines, and [more here](https://www.datanovia.com/en/wp-content/uploads/dn-tutorials/ggplot2/figures/031-line-types-in-r-for-base-plot-and-ggplot-different-line-types-in-r-lty-linetype-1.png)
+* lwd: Line width. I usually use 1.
+* main: this is to specify the title of the plot
+* xlab / ylab: x/y labels
+* xlim / ylim: x/y limits.  Needs to be in c(min, max) format.
+
+After a plot, you can also things using the following functions.  Use the help function to learn more about these.
+
+* ```abline()```: add a straight line
+* ```points()```: add points from data
+* ```lines()```: add lines from data
+* ```legend()```: add a legend to the plot
+* ```segments()```: add line segments
+
+Let's start by plotting bid against diff.  Next, let's add a horizontal line at zero and a vertical line at 50 (both arbitrary choices) and color them blue and red, respectively.  Finally, let's add a y = 50 - x line to the plot as well.
+
+<div class="fold o">
+```{r}
+plot(bidz$bid, bidz$diff)
+
+abline(h = 0, v = 50, col = c("blue", "red"))
+abline(a = 50, b = -1) #y = a + bx
+```
+</div>
+
+We can also make use of the bid order column in the bidz data if we want to make a time series type plot.  On top of this, we can also change the background color and the number of plots displayed with the ```par()``` command.  Just make sure to reset it after! For example:
+
+<div class="fold o">
+```{r}
+par(bg = "pink", mfrow = c(1,3))
+
+plot(bidz$bid, bidz$diff, col = "blue")
+plot(bidz$time, bidz$bid, col = "dark green", pch = 4, cex = 2, xlab = "Time", ylab = "Bid ($)")
+plot(bidz$time, bidz$diff, col = "red", pch = 19, main = "Diff vs Time", ylab = "", xlab = "")
+
+par(bg = "white", mfrow = c(1,1))
+```
+</div>
+
+We can also conditionally color parts of the plot.  We will go into these conditions more later, but the idea is to color the positive difference values dark green and the negative ones red.
+
+<div class="fold o">
+```{r}
+plot(bidz$bid, bidz$diff, col = ifelse(bidz$diff >= 0, "dark green", "red"), pch = 19)
+```
+</div>
+
+We can also plot distributions by either ```plot(table())``` or ```hist()```.   The latter of these two options bins the data in a histogram format while the former will take a more exact approach.
+
+<div class="fold o">
+```{r}
+par(mfrow = c(1,2))
+plot(table(bidz$diff))
+hist(bidz$diff)
+par(mfrow = c(1,1))
+```
+</div>
+
+Using the ```scales``` package, we can change the opacity of the points, so we can see the concentration.  I am going to make a 10000 random numbers and plot them against another 10000 numbers.  The opacity will allow us to see overlaps.
+
+<div class="fold o">
+```{r}
+library("scales")
+set.seed(123)
+plot(round(rnorm(10000),2), round(rnorm(10000),2),
+     xlim = c(-1,1), ylim = c(-1,1),
+     pch = 19,
+     xlab = "", ylab = "", main = "",
+     col = alpha("black", .2))
+```
+</div>
+
+# Econometrics
+
+Let's create a dataset right here and run some analyses.  It is helpful to simulate data so we can know the exact parameters we are trying to estimate.  I am going to create 5000 cars that can take on 3 possible colors, 20 possible ages, a maximum speed, a miles per gallon measurement (mpg), an indicator for ecofriendly, and a price.  Speed and mpg are going to be functions of age, and eco friendly is going to be a 1 if a car is both faster than average AND has a higher mpg than average.  This is to force some multicolinearity, heteroskedasticity and real-life-ness into the model.
+
+<div class="fold o">
+```{r}
+N <- 5000
+carz <- data.frame(color = sample(c("orange", "blue", "dark green"), N, replace = TRUE),
+                   state = sample(c("NY", "NJ", "CT", "PA"), N, replace = TRUE),
+                   age = sample(1:20, N, replace = TRUE),
+                   maxSpeed = NA,
+                   mpg = NA,
+                   price = NA,
+                   ecoFriendly = NA)
+carz$color <- as.character(carz$color)
+carz$maxSpeed <- rnorm(120 - (carz$age)/2, 8 + (carz$age)/4)
+carz$mpg <- rnorm(20 - (carz$age)/10, 4 + (carz$age)/10)
+carz$ecoFriendly <- round(ifelse(carz$mpg > mean(carz$mpg) & carz$maxSpeed > mean(carz$maxSpeed), .3, 0) + runif(N, 0, .7), 0)
+carz$price <- ifelse(carz$color == "orange", 60, ifelse(carz$color == "blue", 30, 0)) - (5*carz$age) + (10*carz$maxSpeed) + (carz$mpg) + rnorm(N, 0, 5)
+head(carz)
+```
+</div>
+
+We can see the head of our data. Some plots might be in order to discover some underlying patterns.  
+
+<div class="fold o">
+```{r}
+par(mfrow = c(1,3))
+plot(carz$maxSpeed, carz$price, col = carz$color)
+abline(lm(carz$price ~ carz$maxSpeed))
+plot(carz$age, carz$price, col = carz$color)
+abline(lm(carz$price ~ carz$age))
+plot(carz$mpg, carz$price, col = carz$color)
+abline(lm(carz$price ~ carz$mpg))
+```
+</div>
+
+From these plots, we can see that orange cars appear to constantly be selling for more, which is set in our price equation.  If max speed is our variable of interest, maybe we want to consolidate these plots by findng the average price per max speed, rounded to the nearest decimal.  We can also plot this by color as well.
+
+<div class="fold o">
+```{r}
+par(mfrow = c(1,1))
+plot(aggregate(carz$price, list(round(carz$maxSpeed, 1)), FUN = mean), ylab = "Price", xlab = "Max Speed", type = "p", pch = 19)
+
+k <- aggregate(carz$price, list(round(carz$maxSpeed, 1), carz$color), FUN = mean)
+plot(k$Group.1, k$x, ylab = "Price", xlab = "Max Speed", col = "white")
+points(k$Group.1[k$Group.2 == "orange"], k$x[k$Group.2 == "orange"], col = "orange", pch = 19)
+points(k$Group.1[k$Group.2 == "blue"], k$x[k$Group.2 == "blue"], col = "blue", pch = 19)
+points(k$Group.1[k$Group.2 == "dark green"], k$x[k$Group.2 == "dark green"], col = "dark green", pch = 19)
+```
+</div>
+
+## Summary Stats
+
+To create summary statistics of our dataset, we can use the ```stargazer()```.  When a data frame is passed to stargazer, it automatically makes summary stats for all numeric variables.
+
+```{r, results = "hide"}
+library("stargazer")
+```
+
+<div class="fold o">
+```{r}
+stargazer(carz, type = "text")
+```
+</div>
+
+## Regressions
+
+Suppose we are given this dataset and we are tasked with deriving a model for price, and a model for predicting if a car is ecofriendly.  First, let's attempt to model price with the ```lm()``` function, and then with the ```felm()``` function.
+
+### ```lm()```
+
+Let's write down an econometric model like the one below.  This is what we will estimate.
+
+$$ P_i = \alpha_c + \beta Age_i + \gamma MPG_i + \delta Speed_i + \epsilon_i  $$
+
+<div class="fold o">
+```{r}
+reg1 <- lm(price ~ age, data = carz)
+reg2 <- lm(price ~ age + mpg + maxSpeed, data = carz)
+reg3 <- lm(price ~ age + mpg + maxSpeed + color, data = carz)
+reg4 <- lm(price ~ age + mpg + maxSpeed + color + state, data = carz)
+stargazer(reg1, reg2, reg3, reg4,
+          type = "text",
+          add.lines = list(c("Color FE", "N", "N", "Y", "Y"),
+                           c("Robust SE", "N", "N", "N", "N")),
+          omit = "color", omit.stat = "f",
+          covariate.labels = c("Age in Years", "Miles Per Gallon", "Max. Speed"))
+```
+</div>
+
+We now have estimates for each of parameters outlined in the written out model.  Let's suppose that for some reason, you think there is an issue with data from a certain state due to some funky regulations.  Perhaps this regulation only affects old cars in that state.  We can limit our dataset, instead of dropping observations, by using the following code.
+
+```{r}
+lim <- carz$state %in% c("NY", "PA", "CT") #or, carz$state != "NJ"
+reg1a <- lm(price ~ age, data = carz[lim,])
+
+lim <- !(carz$state == "NJ" & carz$age > 15)
+reg1b <- lm(price ~ age, data = carz[lim,])
+```
+
+### ```felm()```
+
+In this sample of data, we do not have many fixed effects.  However, there may be cases where there can be hundreds or even thousands.  To handle this, the ```felm()``` function is very handy.  This will partial out the fixed effects and hide them from the output.  Further, it also has the ability to do instrumental variables and clustered standard errors.  The structure of the arguments of ```felm()``` are as follows: ```felm(y ~ x1 + x2 | FE | x1 ~ z | CLSE, data = dataset)```.  The first section is the formula without fixed effects, followed by fixed effects, followed by the formula for the IV, followed by the variable for clustering the standard errors.  One thing to be careful about is multicolinearity.  ```felm()``` will spit out a warning/error if a variable in the regular formula is perfectly colinear with the fixed effects.  For example, if one variable is binary and tells if the observation comes from a democratic state but you've also included state fixed effects, there will be a warning/error.
+
+In this setting, we can estimate both the regular standard errors as well as robust standard errors.  I am not advocating for using color as an appropriate cluster, but rather just using it as an example.
+
+```{r, results='hide'}
+library("lfe")
+library("sandwich")
+library("lmtest")
+```
+
+<div class="fold o">
+```{r}
+reg51 <- lm(price ~ age + mpg + maxSpeed + color, data = carz)
+reg52 <- felm(price ~ age + mpg + maxSpeed | color | 0 | 0, data = carz)
+
+reg61 <- felm(price ~ age + mpg + maxSpeed | color | 0 | color, data = carz)
+reg62 <- lm(price ~ age + mpg + maxSpeed + color, data = carz)
+reg62 <- coeftest(reg62, vcovCL, cluster = carz$color) #reg62 <- coeftest(reg62, vcovHC) #this is for heteroskedasticity robust SE
+
+stargazer(reg51, reg52,
+          reg61, reg62,
+          type = "text",
+          add.lines = list(c("Color FE", rep("Y", 4)),
+                           c("Robust SE", "N", "N", "Y", "Y")),
+          omit = c("color", "Constant"), omit.stat = c("f", "ser"),
+          covariate.labels = c("Age in Years", "Miles Per Gallon", "Max. Speed"))
+
+```
+</div>
+
+### ```glm()```
+
+Maybe our variable of interest is predicting a binary outcome - whether or not a vehicle is eco-friendly.  Instead of using just single standalone variables, we can also include interaction effects.  [Here](https://www.theanalysisfactor.com/interpreting-interactions-in-regression/) is a short and intuitive explination of interactions.
+
+<div class="fold o">
+```{r}
+reg1 <- glm(ecoFriendly ~ age, data = carz, family="binomial")
+reg2 <- glm(ecoFriendly ~ age + mpg + maxSpeed, data = carz, family="binomial")
+reg3 <- glm(ecoFriendly ~ age + mpg + maxSpeed + color, data = carz, family="binomial")
+reg4 <- glm(ecoFriendly ~ age + mpg*maxSpeed + color, data = carz, family="binomial")
+
+#create vectors, > mean
+carz$mpg_high <- carz$mpg >= mean(carz$mpg)
+carz$maxSpeed_high <- carz$maxSpeed >= mean(carz$maxSpeed)
+
+reg5 <- glm(ecoFriendly ~ age + mpg_high*maxSpeed_high + color, data = carz, family="binomial")
+
+stargazer(reg1, reg2, reg3, reg4, reg5,
+          type = "text",
+          add.lines = list(c("Color FE", "N", "N", "Y", "Y", "Y"),
+                           c("Robust SE", "N", "N", "N", "N", "N")),
+          omit = "color", #omit.stat = "f",
+          covariate.labels = c("Age in Years", "Miles Per Gallon", "Max. Speed", "MPG > mean", "Max. Speed > mean"))
+```
+</div>
+
+# Differences in Differences
+
+With a lot of focus in economics being on causal inference, it is important to be exposed to these things and learn to program them.  I am not going to try to explain Differences in Differences here, but you can take a look at this code and check out what's happening analytically and graphically.
+
+<div class="fold o">
+```{r}
+library("scales")
+set.seed(321)
+data.frame(state = c(rep("NY", 40), rep("NJ", 40), rep("CT", 40), rep("PA", 40)),
+           year = rep(c(1960:1999), 4),
+           x1 = c(rnorm(40, 0, 1), rnorm(40, 0, 2), rnorm(40, 4, 1), rnorm(40, 4, 2)),
+           x2 = c(rnorm(40, 6, 1), rnorm(40, 2, 1), rnorm(40, 3, 2), rnorm(40, 7, 1)),
+           treat = c(rep(1, 40), rep(0, 120)),
+           post = c(rep(c(rep(0, 25), rep(1, 15)), 4))) -> did
+
+did$y <- -did$x1 + 4*did$x2 + 3*did$treat + 2*did$post + 5*did$treat*did$post + rnorm(160, 0, 2)
+plot(did$year, did$y, col = "white", main  = "", ylab = "Y", xlab = "Year")
+lines(did$year[did$state == "NY"], did$y[did$state == "NY"], col = alpha("orange", .25), lwd = 3)
+lines(did$year[did$state == "NJ"], did$y[did$state == "NJ"], col = alpha("dark green", .25), lwd = 3)
+lines(did$year[did$state == "CT"], did$y[did$state == "CT"], col = alpha("dark green", .25), lwd = 3)
+lines(did$year[did$state == "PA"], did$y[did$state == "PA"], col = alpha("dark green", .25), lwd = 3)
+abline(v = 1985)
+
+segments(x0 = c(rep(1960, 2), rep(1985, 2)),
+         x1 = c(rep(1985, 2), rep(1999, 2)),
+         y0 = c(mean(did$y[did$treat == 1 & did$post == 0]),
+                mean(did$y[did$treat == 0 & did$post == 0]),
+                mean(did$y[did$treat == 1 & did$post == 1]),
+                mean(did$y[did$treat == 0 & did$post == 1])),
+         y1 = c(mean(did$y[did$treat == 1 & did$post == 0]),
+                mean(did$y[did$treat == 0 & did$post == 0]),
+                mean(did$y[did$treat == 1 & did$post == 1]),
+                mean(did$y[did$treat == 0 & did$post == 1])),
+         col = c("orange", "dark green", "orange", "dark green"),
+         lwd = 4 ,lty = c(2, 3))
+
+par(mfrow = c(1,3))
+plot(did$year, did$y, col = "white", main  = "", ylab = "Y", xlab = "Year")
+segments(x0 = c(rep(1960, 2), rep(1985, 2)),
+         x1 = c(rep(1985, 2), rep(1999, 2)),
+         y0 = c(mean(did$y[did$treat == 1 & did$post == 0]),
+                mean(did$y[did$treat == 0 & did$post == 0]),
+                mean(did$y[did$treat == 1 & did$post == 1]),
+                mean(did$y[did$treat == 0 & did$post == 1])),
+         y1 = c(mean(did$y[did$treat == 1 & did$post == 0]),
+                mean(did$y[did$treat == 0 & did$post == 0]),
+                mean(did$y[did$treat == 1 & did$post == 1]),
+                mean(did$y[did$treat == 0 & did$post == 1])),
+         col = alpha(c("orange", "dark green", "orange", "dark green"), .4),
+         lwd = 4 ,lty = c(2, 3))
+
+plot(did$year, did$y, col = "white", main  = "", ylab = "Y", xlab = "Year")
+diff1 <- mean(did$y[did$treat == 1 & did$post == 1]) - mean(did$y[did$treat == 1 & did$post == 0])
+diff2 <- mean(did$y[did$treat == 0 & did$post == 1]) - mean(did$y[did$treat == 0 & did$post == 0])
+segments(x0 = c(rep(1960, 2), rep(1985, 2)),
+         x1 = c(rep(1985, 2), rep(1999, 2)),
+         y0 = c(0,
+                0,
+                diff1,
+                diff2),
+         y1 = c(0,
+                0,
+                diff1,
+                diff2),
+         col = alpha(c("orange", "dark green", "orange", "dark green"), .4),
+         lwd = 4 ,lty = c(2, 3))
+
+plot(did$year, did$y, col = "white", main  = "", ylab = "Y", xlab = "Year")
+segments(x0 = c(rep(1960, 2), rep(1985, 2)),
+         x1 = c(rep(1985, 2), rep(1999, 2)),
+         y0 = c(0,
+                0,
+                diff1 - diff2,
+                0),
+        y1 = c(0,
+                0,
+                diff1 - diff2,
+                0),
+         col = alpha(c("orange", "dark green", "orange", "dark green"), .4),
+         lwd = 4,lty = c(2, 3))
+segments(x0 = 1985, y0 = 0, y1 = diff1-diff2, col = "red", lwd = 3)
+```
+</div>
+
+Using raw averages, here is my estimated diff-in-diff parameter.  This will differ slightly from the regression, but that is expected.
+<div class="fold o">
+```{r}
+print(diff1-diff2)
+stargazer(lm(y ~ x1 + x2 + treat*post, data = did), type = "text", omit.stat = c("f", "ser"), omit = c("x", "Constant"))
+```
+</div>
+
+## Sharks Homework
+
+Use the sharks dataset for this HW.  This should be more slightly more difficult than the first homework.  You will likely have to do some googling, but I have hinted some functions to look into.  After each line, try to view the data to see if the results of your code match what you wanted it to do.
+
+* Make a time series plot of the number of attacks per year.
+* Make a frequency distribution for the ages of those being attacked.
+* Plot the locations of the shark attacks.  Color the attacks by whether or not the attack was fatal.  Once this works, try and get fancy with the ```scales``` package.
+* Make a new binary variable for whether the attack was on the west coast. (hint, ```?ifelse```)
+* Make a binary variable for if the attack was unprovoked. (hint, ```?ifelse```)
+* Make a binary variable for if there was "No injury" or a "minor" injury (hint, look for these inside the text of the Injury column.  hint, ```?grepl```)
+* Make a binary variable for if the person attacked was male.  You may have to use both the Sex column and the Name column.
+* Make summary stats for the sharks data.
+* Use the binary variable for no injury or minor injury as your dependent variable.  Given an attack, what factors lead to more serious injuries?  Run a few regressions, have fun with it.
+* Is there a variable that significantly changes the sample size of your regressions? Why
+* Do you think these missing ages are [missing at random](https://www.ncbi.nlm.nih.gov/books/NBK493614/)?
+* Are serious injuries more or less likely given missingness for the variable?
