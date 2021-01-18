@@ -1,6 +1,7 @@
 body {
     margin: 30px auto;
     width: 80%;
+    background-color: #FFE4B5;
 }
 nav ul, footer ul {
     font-family:'Helvetica', 'Arial', 'Sans-Serif';
@@ -44,7 +45,7 @@ ul.posts li {
 
 
 /* https://www.w3schools.com/howto/howto_js_collapsible.asp */
-/* Style the button that is used to open and close the collapsible content */
+/* Style the button that is used to open and close the collapsible */
 .collapsible {
   background-color: #eee;
   color: #444;
@@ -67,5 +68,5 @@ ul.posts li {
   padding: 0 18px;
   display: none;
   overflow: hidden;
-  background-color: #f1f1f1;
+  background-color: #FFE4B5;
 }
