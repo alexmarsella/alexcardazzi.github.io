@@ -1,7 +1,6 @@
 body {
     margin: 30px auto;
     width: 80%;
-    background-color: #FFE4B5;
 }
 nav ul, footer ul {
     font-family:'Helvetica', 'Arial', 'Sans-Serif';
@@ -68,5 +67,4 @@ ul.posts li {
   padding: 0 18px;
   display: none;
   overflow: hidden;
-  background-color: #FFE4B5;
 }
