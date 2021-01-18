@@ -4,7 +4,25 @@
 		<title>Alexander Cardazzi</title>
 		<!-- link to main stylesheet -->
 		<link rel="stylesheet" type="text/css" href="/css/main.css">
-		<style>img {vertical-align: middle; display: block; margin-left: auto; margin-right: auto;}</style>
+		<style>
+			img {vertical-align: middle; display: block; margin-left: auto; margin-right: auto;}
+			
+			* {
+			  box-sizing: border-box;
+			}
+
+			.img-container {
+			  float: left;
+			  width: 50.00%;
+			  padding: 5px;
+			}
+
+			.clearfix::after {
+			  content: "";
+			  clear: both;
+			  display: table;
+			}
+		</style>
 	</head>
 	
 	<body>
@@ -39,6 +57,15 @@
 		
 		<div>
 			<img src="/pictures_of_me/alex_bk.jpg" style="width:30%">
+		</div>
+		
+		<div class="clearfix">
+		  <div class="img-container">
+		  <img src="/pictures_of_me/alex_sf.jpg" alt="Summer in California" style="width:100%">
+		  </div>
+		  <div class="img-container">
+		  <img src="/pictures_of_me/alex_bk.jpg" alt="Winter in New York" style="width:100%">
+		  </div>
 		</div>
 		
 		<footer>
