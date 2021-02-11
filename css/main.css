@@ -19,6 +19,7 @@ a {
 a:hover {
     /*text-decoration: underline;*/
     opacity: 0.7;
+    color: ForestGreen;
 }
 h1 {
     font-size: 3em;
