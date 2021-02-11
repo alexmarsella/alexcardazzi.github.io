@@ -23,34 +23,17 @@
 			  clear: both;
 			  display: table;
 			}
-			
-			.outer-1 {
-			  position: relative;
-			  width: 100px;
-			  height: 100px;
-			}
 
-			.outer-1 > img {
+			.img-container .hoverImg {
 			  position: absolute;
-			  width: 100%;
-			  height: 100%;
-			  z-index: 1;
-			  left: 0px;
-			  top: 0px;
+			  left: 0;
+			  top: 0;
+			  display: none;
 			}
 
-			.outer-1 > div {
-			  position: relative;
-			  z-index: 2;
+			.img-container:hover .hoverImg {
+			  display: block;
 			}
-			
-			.hide_me {
-				position: absolute;
-  				width: 20%;
-  				display: none;
-			}
-			
-			.hide_me:hover {display: block;}
 			
 		</style>
 	</head>
@@ -85,11 +68,22 @@
 		  <div class="img-container">
 			  <img src="/pictures_of_me/alex_sf.jpg" style="width:100%">
 		  </div>
-		  <div class="img-container outer-1">
-			  <img src="/pictures_of_me/alex_bk.jpg" style="width:100%">
-			  <div class = "hide_me"><img src="https://media.giphy.com/media/dCXkFlKsDo0rG3vSJp/source.gif"></div>
+		  <div class="img-container">
+			  <!-- <img src="/pictures_of_me/alex_bk.jpg" style="width:100%"> -->
+			  <!-- <div class = "hide_me"><img src="https://media.giphy.com/media/dCXkFlKsDo0rG3vSJp/source.gif"></div> -->
+			  
+			  <div class="imageInn">
+			    <img src="/pictures_of_me/alex_bk.jpg" style="width:100%" alt="Default Image">
+			  </div>
+			  <div class="hoverImg">
+			    <img src="https://lh5.googleusercontent.com/-gRq6iatuNYA/AAAAAAAAAAI/AAAAAAAAANk/674knqRN1KI/photo.jpg" alt="Profile Image">
+			  </div>
+			  
 		  </div>
 		</div>
+		
+		
+		
 		
 		
 		<footer>
