@@ -14,8 +14,8 @@ nav ul li, footer ul li {
 }
 
 nav ul li:hover, footer ul li:hover {
-    font-size: 110%;
-    transition: font-size 2s ease;
+    font-size: 1100%;
+    transition: font-size 20s ease;
 }
 
 a {
