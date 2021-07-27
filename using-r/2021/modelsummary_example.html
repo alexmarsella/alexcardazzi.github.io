@@ -271,10 +271,10 @@ datasummary(frmla, output = &quot;latex&quot;,
 ## \toprule
 ##   &amp; Mean &amp; St. Dev. &amp; Min &amp; Max\\
 ## \midrule
-## Outcome &amp; 4070.232 &amp; 5209.321 &amp; -22.923 &amp; 18289.939\\
-## Variable 1 &amp; -0.001 &amp; 1.001 &amp; -4.638 &amp; 5.112\\
-## Variable 2 &amp; -0 &amp; 1.003 &amp; -4.498 &amp; 4.950\\
-## Variable 3 &amp; -0 &amp; 1 &amp; -4.425 &amp; 4.960\\
+## Outcome &amp; 4073.371 &amp; 5223.76 &amp; -14.009 &amp; 18284.912\\
+## Variable 1 &amp; -0 &amp; 1 &amp; -4.788 &amp; 4.762\\
+## Variable 2 &amp; -0 &amp; 1.001 &amp; -4.962 &amp; 4.679\\
+## Variable 3 &amp; 0 &amp; 0.999 &amp; -4.736 &amp; 5.104\\
 ## \bottomrule
 ## \end{tabular}
 ## \begin{tablenotes}[flushleft]
@@ -290,23 +290,23 @@ datasummary(frmla, output = &quot;latex&quot;,
 <pre class="r"><code>timeNow &lt;- Sys.time()
 reg1 &lt;- feols(y ~ var1 + var2:var3, data = df)
 print(Sys.time() - timeNow)</code></pre>
-<pre><code>## Time difference of 0.1525981 secs</code></pre>
+<pre><code>## Time difference of 0.131731 secs</code></pre>
 <pre class="r"><code>timeNow &lt;- Sys.time()
 reg_lm &lt;- lm(y ~ var1 + var2:var3, data = df)
 print(Sys.time() - timeNow)</code></pre>
-<pre><code>## Time difference of 0.4665949 secs</code></pre>
+<pre><code>## Time difference of 0.6450691 secs</code></pre>
 <pre class="r"><code>timeNow &lt;- Sys.time()
 reg2 &lt;- feols(y ~ var1 + var2:var3 | FE1, data = df)
 print(Sys.time() - timeNow)</code></pre>
-<pre><code>## Time difference of 0.229388 secs</code></pre>
+<pre><code>## Time difference of 0.3968339 secs</code></pre>
 <pre class="r"><code>timeNow &lt;- Sys.time()
 reg_lm &lt;- lm(y ~ var1 + var2:var3 + as.factor(FE1), data = df)
 print(Sys.time() - timeNow)</code></pre>
-<pre><code>## Time difference of 2.26366 secs</code></pre>
+<pre><code>## Time difference of 3.809715 secs</code></pre>
 <pre class="r"><code>timeNow &lt;- Sys.time()
 reg3 &lt;- feols(y ~ var1 + var2:var3 | FE1 + FE2, data = df)
 print(Sys.time() - timeNow)</code></pre>
-<pre><code>## Time difference of 0.2907062 secs</code></pre>
+<pre><code>## Time difference of 0.468055 secs</code></pre>
 <pre class="r"><code># the reg_lm version of this failed on my machine and cutting the sample size down to 10,000 still took over a few minutes.</code></pre>
 </div>
 </div>
@@ -337,7 +337,7 @@ modelsummary(
   title = &quot;Effect of X on Y\\label{tab:reg_1}&quot;,
   add_rows = xtraRows,
   gof_omit = 'IC|Log|Within|Pseudo|Errors|Adj|^FE') %&gt;% #remove certain rows
-  kableExtra::add_header_above(c(&quot; &quot; = 1, &quot;outcome&quot; = length(THE_REGZ)+1)) %&gt;%
+  kableExtra::add_header_above(c(&quot; &quot; = 1, &quot;outcome&quot; = length(THE_REGZ))) %&gt;%
   # kableExtra::kable_styling(latex_options = c(&quot;scale_down&quot;)) %&gt;% #if you have a small table, remove this or it will look huge!
   kableExtra::footnote(general = list(paste0('Note Note Note.',
                                              ' Other note saying other things.',
@@ -360,13 +360,13 @@ modelsummary(
 ## \begin{threeparttable}
 ## \begin{tabular}[!htbp]{lccc}
 ## \toprule
-## \multicolumn{1}{c}{ } &amp; \multicolumn{4}{c}{outcome} \\
+## \multicolumn{1}{c}{ } &amp; \multicolumn{3}{c}{outcome} \\
 ## 
 ## \midrule
-## Variable 1 &amp; 6.390 &amp; 6.430 &amp; -1.994***\\
-##  &amp; (5.204) &amp; (5.985) &amp; (0.003)\\
-## Variable 2 x Variable 3 &amp; -0.996 &amp; -1.066 &amp; 3.996***\\
-##  &amp; (5.202) &amp; (5.273) &amp; (0.003)\\
+## Variable 1 &amp; -9.395* &amp; -9.429* &amp; -2.001***\\
+##  &amp; (5.224) &amp; (4.790) &amp; (0.003)\\
+## Variable 2 x Variable 3 &amp; 11.020** &amp; 11.016** &amp; 3.998***\\
+##  &amp; (5.214) &amp; (4.362) &amp; (0.003)\\
 ## \midrule
 ## Observations &amp; 1e+06 &amp; 1e+06 &amp; 1e+06\\
 ## R2 &amp; 0.000 &amp; 0.000 &amp; 1.000\\
