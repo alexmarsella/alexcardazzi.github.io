@@ -1,0 +1,1 @@
+Some figures from Lasting Trauma From Stop & Frisk: Evidence From The Housing Market in New York City
