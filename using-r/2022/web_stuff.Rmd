@@ -1,0 +1,483 @@
+---
+title: "Web Crawling & Scraping in R"
+author: "Alexander Cardazzi"
+date: "July, 2022"
+output:
+  html_document:
+    code_folding: 'show'
+    css: "format/buttonStyle.css"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+<script src="format/hideOutput.js"></script>
+
+# Introduction
+
+Web crawling and web scraping are tools that are important for collecting unique data.  In this tutorial, we will go over how to crawl websites, how to scrape websites, the different types of websites (in terms of crawling), and a little bit about HTML.
+
+Before we get there, though, I also want to quickly show off the ```magrittr``` package.  This package seems mostly cosmetic, but it can significantly simplify your code and make it much more readable.  The package allows one to declutter complicated lines of code.  See the following example.
+
+Suppose we want to take the square root of $e$ raised to the mean of some vector.  This is clearly a multistep process, and I have outlined two ways to compute these.  The first one is the way you may have done this if you never heard of ```magrittr```.  The second way uses ```%>%```, which is called a "pipe", to spread out the calculation.  I prefer to read the code from top to bottom rather than from the inside-out on one line.
+
+<div class="fold o">
+```{r, eval = TRUE}
+library("magrittr")
+set.seed(678)
+x <- rnorm(100)
+
+print(sqrt(exp(mean(x))))
+
+x %>%
+  mean() %>%
+  exp() %>%
+  sqrt() %>%
+  print()
+```
+</div>
+
+One important point is that the pipe operator ```%>%``` places the left hand side into the FIRST argument of the right hand side.  For example, let's look at the rnorm function.
+
+<div class="fold o">
+```{r, eval = TRUE}
+5 %>% rnorm() #n = 5, mean = 0, sd = 1
+
+5 %>% rnorm(4, .) #n = 4, mean = 5, sd = 1
+
+5 %>% rnorm(4, -10, .) #n = 4, mean = -10, sd = 5
+
+5 %>% rnorm(., ., .) #n = 5, mean = 5, sd = 5
+```
+</div>
+
+The first line put the 5 into the n argument.  The second line put the 5 into the mean argument.  The third line put the 5 into the sd argument.  The fourth line put 5 into each argument.
+
+As a final note about ```magrittr```, R now has a native piping feature.  See [this link](https://ivelasq.rbind.io/blog/understanding-the-r-pipe/) for more discussion about this.
+
+Now we have the *programming* requisites to talk about crawling and scraping!  Now we need some knowledge of HTML.
+
+### HTML
+
+HTML is a coding language that is one of three standards for building websites.  Extensive knowledge of HTML is not needed for this tutorial, but some points would be worth knowing.  HTML objects (ex: div, table, tr) "contain" more HTML objects.  We will call these subobjects "children" or "nodes".  For an illustration, imagine a row (tr) of a table.  Within this row, there are data points (td).  These data point are children of the tr.  This is how HTML is structured or "nested".  Below is an example of what HTML code might look like.  In this example, the \<body> tag has children \<h1> and \<p>.  This should remind you of what a list in R looks like.
+
+![](format/html_ex.jpg)
+
+We will identify "nodes" in html, using (mostly) Cascading Style Sheets ("CSS") identifiers.  This is how we will tell the computer what we want from the HTML.  The CSS selector for \<h1> would be "body > h1".  There is an easier way to obtain these tags.  You can right click on the element you are interested in, and click on Inspect from the list that appears.  In Google Chrome, you can hover over the HTML code that pops up and it will highlight the part of the website it belongs to.  Once you find the right element, you can write click and select "copy selector".  There is a moderate learning curve for this, but it's not so bad.  In addition, CSS Selectors can be rather simple and inuitive (#per_game_stats), or they can be random and complex (#pj_6d153fea112bcee1 > div.sjcl > div:nth-child(1) > a > span.slNoUnderline).
+
+# Crawling
+
+What is crawling?  Crawling is simply downloading/saving a webpage's HTML code so you can extract, or scrape, the data afterwards.  This is important when your scripts start to crawl hundreds of thousands of pages, or if you want to record data from a site over time.  Unfortunately, some websites do not like to be crawled, and you can find their preferences on their robots.txt pages.  This is the time I will obligatorily say to respect a website's wishes and wait times as you crawl.  Information on how to read these can be found [here](https://moz.com/learn/seo/robotstxt).
+
+* [basketball-reference.com](https://www.basketball-reference.com/robots.txt)
+* [CDC](https://www.cdc.gov/robots.txt)
+* [Nike](https://www.nike.com/robots.txt) (Scroll to the bottom)
+
+# Setting up our script
+
+To begin, we are going to load libraries, clean our workspace, set our working directory, etc.  We are going to load a few new packages for this.  Make sure you install them first!
+
+```{r, eval = TRUE, results = "hide", message = FALSE}
+library("xml2")
+library("rvest")
+library("magrittr")
+library("jsonlite")
+
+FOLDER <- "C:/Users/alexc/Desktop/Empirical Workshop 2022/scraped_html" #this might look slightly different for mac/linux users
+setwd(FOLDER)
+```
+
+## Crawl One Page
+
+Crawling a single page is easy, especially if there aren't any frills on the website.  You will tell R to visit the website, read the html, and save the html.  Done!  Let's get the [2019 New York Knicks roster](https://www.basketball-reference.com/teams/NYK/2019.html).
+
+```{r, eval = FALSE}
+link <- "https://www.basketball-reference.com/teams/NYK/2019.html"
+link %>%
+  read_html() -> myHTML
+
+myHTML %>%
+  write_html("knicks2019.html")
+```
+
+Now this file is saved to your folder, and you can pop it open and check it out.  It will likely look a little weird, but everything on the page at the moment of the crawl will be there!
+
+## Crawl Multiple Pages
+
+It's rare that all the data you want is on a single page.  Rather, we will likely need to traverse several pages to collect data.  We can combine some string functions, for loops and the last snippet of crawling code to do multiple pages!  Lucky for us, there is a natural pattern to the URL where we can just change the year.
+
+```{r, eval = FALSE}
+for(year in 2010:2019){
+  
+  paste0("https://www.basketball-reference.com/teams/NYK/",year,".html") %>%
+    read_html() %>%
+    write_html(paste0("knicks",year,".html"))
+}
+```
+
+This is the simplest case for crawling.  While there are a good number of websites that are this easy, there are many that are not.  Let's take a look at some dynamically generated websites now.
+
+## Dynamically Generated Websites
+
+[This](https://analytics.usa.gov/) website has the number of people on government websites at the moment.  Let's scrape this number!
+<div class="fold o">
+```{r, eval = TRUE}
+"https://analytics.usa.gov/" %>%
+  read_html() %>%
+  html_nodes("#current_visitors") %>%
+  html_text()
+```
+</div>
+
+It gives us "...".  This is because it is generated after the website is loaded. So, we need to see where the data is coming from.  Instead of looking at the "elements" tab in inspect mode, we will look at the network tab.  If we reload the page by refreshing, we should see a whole bunch of things "waterfall" and it should look crazy.  We are going to sort by type, scroll down and check out all the "XHR" files.  Essentially, the website sees that you've loaded it and sends out its own code to load data.  ```read_html()``` takes the original code before any loading happens once you're on the page.  In fact, if you refresh the page, you may be able to see the "..." before the code replaces it with data.
+
+After exploring the XHR files, I found this one called realtime.json.  Right click on this one and open it in a new tab.  This is a JSON (JavaScript Object Notation) format, is becoming increasingly popular.  Typically, we are taught to think of data in table format, but JSON is more of a "notebook", list-type format.  Luckily, we have a package to handle this for us!  We can crawl these websites by saving the important JSON files.
+
+### Use their API
+<div class="fold o">
+```{r, eval = TRUE}
+"https://analytics.usa.gov/data/live/realtime.json" %>%
+  fromJSON() -> stuff
+stuff$data$active_visitors
+```
+</div>
+
+## Submitting Forms
+Some websites require users to fill out forms.  These forms might be dropdown menus, logins, search bars, etc.  We can deal with most of these with our ```rvest``` package.
+
+Let's take a look at the CDC's Wonder database.  This is a great resource for datasets, but can be difficult to download from en masse.  The CDC has provided an API for some of these databases (but not all), and some very nice people have written R packages to access these APIs.  What happens if you need data that isn't covered by the APIs / packages?
+
+Here is an example of one we can pull data from: [https://wonder.cdc.gov/nasa-pm.html](https://wonder.cdc.gov/nasa-pm.html)
+
+The following few code chunks will show how you might build a crawler step-by-step:
+
+<div class="fold o">
+```{r, eval = TRUE}
+# Suppose we are given the following FIPS codes
+FIPZ <- c(36087, 36093, 36083, 36075, 36119, 36061, 36081, # New York
+          51059, 51710, 51740, # Virginia
+          42001, 42003, 42077, 42101) # Pennsylvania
+
+# For some reason, the website will not accept fips from different states in one go
+# We need to create an identifier:
+FIPZ_st <- substr(FIPZ, 1, 2)
+print(FIPZ_st)
+
+for(fip_st in unique(FIPZ_st)){
+  
+  cat(FIPZ[FIPZ_st == fip_st], "\t\t")
+}
+
+for(fip_st in unique(FIPZ_st)){
+  
+  # save the URL
+  "https://wonder.cdc.gov/nasa-pm.html" -> url
+  
+  # begin a "session"
+  url %>% session() -> sesh
+  
+  # find the "forms"
+  sesh %>%
+    html_form() -> unfilled
+  
+  if(fip_st == unique(FIPZ_st)[1]) print(unfilled)
+}
+```
+</div>
+
+<div class="fold o">
+```{r, eval = T}
+for(fip_st in unique(FIPZ_st)){
+  
+  "https://wonder.cdc.gov/nasa-pm.html" -> url
+  url %>% session() -> sesh
+  
+  sesh %>%
+    html_form() -> unfilled
+  
+  # only keep the second form
+  unfilled <- unfilled[[2]]
+  
+  # fill in the form with the relevant information
+  html_form_set(unfilled,
+                "B_1" = "D73.V7-level3", # by month/year
+                "B_2" = "D73.V2-level2", # by county
+                "F_D73.V2" = as.list(FIPZ[FIPZ_st == fip_st]),
+                "RD1_M_D73.V7" = "01", # from month
+                "RD1_D_D73.V7" = "01", # from day
+                "RD1_Y_D73.V7" = "2010", # from year
+                "RD2_M_D73.V7" = "12", # to month
+                "RD2_D_D73.V7" = "31", # to day
+                "RD2_Y_D73.V7" = "2010") %>% # to year
+    #finally, submit your form to the session
+    session_submit(sesh, form = ., submit = "action-Send") -> k
+  
+  # now, check out the response generated, and save it!
+  k$response %>% read_html() -> tmp
+  
+  tmp %>% write_html(paste0("cdc_", fip_st, ".html"))
+  
+  
+  if(fip_st == unique(FIPZ_st)[1]) print(tmp)
+}
+```
+</div>
+
+##### Cleaning Scraped Data from CDC Wonder
+
+<div class="fold o">
+```{r, eval=TRUE, class.source = 'fold-hide'}
+
+paste0("cdc_", fip_st, ".html") %>%
+  read_html() %>%
+  html_nodes("p") %>%
+  html_text() %>%
+  strsplit("\n") -> tmp
+  
+tmp <- tmp[[1]]
+tmp <- tmp[!grepl("^\"Total", tmp)]
+tmp <- tmp[1:(which(tmp == "\"---\"\r")[1] - 1)]
+  
+colz <- tmp[1]
+colz <- strsplit(colz, "\t")[[1]]
+colz <- colz[2:length(colz)]
+cat(paste(gsub("\"", "", colz), collapse = "\t\t"))
+
+tmp <- tmp[-1]
+tmp <- gsub("\\r|\"|^\t", "", tmp)
+tmp <- strsplit(tmp, "\t")
+tmp <- data.frame(matrix(unlist(tmp), ncol = 9, byrow = T))
+
+head(tmp, 10)
+```
+</div>
+
+Some CDC Wonder datasets (ex: [Multiple Cause of Death, 1999-2020](https://wonder.cdc.gov/mcd-icd10.html)) make you "agree" to data use restrictions.  However, this is just another form!  You can also automate this.  Below is a minor example.
+
+<div class="fold o">
+```{r, eval=F, class.source = 'fold-hide'}
+session("https://wonder.cdc.gov/mcd-icd10.html") -> sesh
+  sesh %>% html_form() -> unfilled
+  submit_form(sesh, unfilled[[2]], submit = "action-I Agree") -> sesh
+  
+  sesh %>%
+    html_form() -> unfilled
+  unfilled <- unfilled[[2]]
+```
+</div>
+
+## GraphQL
+
+A lot of sites are using a new type of query language for their APIs called GraphQL.  This is a bit complicated and I suggest you check out some other resources.  For example: [here](https://ropensci.org/blog/2020/12/08/accessing-graphql-in-r/) and [here](https://docs.ropensci.org/ghql/).
+
+## Extract Table: One Page
+
+```{r}
+read_html("knicks2019.html") -> myHTML
+
+myHTML %>%
+  html_nodes("#roster") %>%
+  html_table() -> roster
+
+roster %>%
+  as.data.frame() -> roster
+```
+
+Explaining how to get this node is not easy, but here goes.  Go to the [Knicks 2019 Roster](https://www.basketball-reference.com/teams/NYK/2019.html#roster).  Right click on the "PG" next to Kadeem Allen's name and click inspect.  The website's HTML should open up and a "td" should be highlighted.  Hover your mouse over this, and slowly move your mouse up.  You should see what's highlighted on the webpage changing (e.g. starting on the PG, moving to Kadeem Allen's name, then to his jersey number, etc).  Eventually, you will reach an element called "table".  Right click on this, and click on "copy selector" from the dropdown.  This should give you "#roster".
+
+## Extract Table: Multiple Pages
+
+Since we have multiple roster pages, we need to run this extraction code for each one.  Obviously, we aren't going to write the code over and over, we are instead going to loop the code.  So, to keep the code as flexible as possible, we are going to introduce a new function called ```list.files()```.  This will return a vector of the names of the files in the current working directory (or any given filepath).  Second, we are going to make a list of rosters where we can store our scraped data each time through the loop.  After we save all of the data frames to a list, we can use ```rbind``` to stack all of them.  Another thing to note is that I am going to create a new vector for each new roster that tells the file this data comes from.  This is an important thing so we can track our data.
+
+```{r}
+
+list.files() -> filez
+roster <- list()
+for(file in filez){
+  
+  file %>%
+    read_html() %>%
+    html_nodes("#roster") %>%
+    html_table() %>%
+    as.data.frame() -> temp #same roster
+  
+  temp$file <- file #add file column
+  
+  roster[[length(roster) + 1]] <- temp
+}
+
+# for(i in 1:length(filez)){
+#   
+#   filez[i] %>%
+#     read_html() %>%
+#     html_nodes("#roster") %>%
+#     html_table() %>%
+#     as.data.frame() -> temp
+# 
+#   temp$file <- filez[i]
+#   
+#   roster[[length(roster) + 1]] <- temp
+# }
+
+rosterFilled <- do.call(rbind, roster)
+```
+
+## Extract Non-Tables, Hyperlinks
+
+Let's suppose now we want to get the twitter accounts of each player on the Knicks.  If you notice, on most player's page (ex: [DeAndre Jordan](https://www.basketball-reference.com/players/j/jordade01.html)), they have their twitter account handle.  Let's augment the current roster with their handles.
+
+To do this, we first need to access the HTML.  Usually, I would get it from the already crawled HTML, but I will do the crawling and scraping in one step here.
+
+```{r, eval = TRUE}
+link <- "https://www.basketball-reference.com/teams/NYK/2019.html"
+link %>%
+  read_html() -> myHTML
+```
+
+Now, let's just get the roster and take a look.
+
+<div class="fold o">
+```{r, eval = TRUE}
+myHTML %>%
+  html_nodes("#roster") %>%
+  html_table() %>%
+  as.data.frame() -> knicks
+head(knicks)
+```
+</div>
+
+You might notice that the ```html_table()``` function does not keep the hyperlinks!  This is annoying since these are the links we want to follow.  So, let's go back to the HTML and investigate if we can find "href" items.  "href" is HTML-speak for hyperlink.
+
+<div class="fold o">
+```{r, eval = TRUE}
+myHTML %>%
+  html_nodes("#roster") %>%
+  html_nodes("a") %>% # <a> nodes are where hrefs are kept.
+                      # you need an <a> to give text, href, and anything else.
+  html_attr("href") -> linkz
+
+head(linkz)
+
+# Remove the NA ones, keep only the ones with "players" in it.
+# Next, add the front half of the website to it.
+linkz <- linkz[grepl("players", linkz)]
+head(linkz)
+linkz <- paste0("https://www.basketball-reference.com", linkz)
+head(linkz)
+knicks$playerLinkz <- linkz
+```
+</div>
+
+Now we have all of the player pages!  Notice how there are more href elements in the table.  This can become tricky in two ways. First, if there is no easy way to tell between the links you want and links you do not want.  Luckily for us, we were able to tell the difference since the roots of the links were different.  Second, sometimes not all rows have a hyperlink.  This means that the vector of hyperlinks will be shorter than the table, and you will have to be very clever about how to find where those "holes" are located.
+
+## Twitter Accounts
+
+So now, we have to visit each player's page, check for a twitter account, and pull it if it exists.
+
+<div class="fold o">
+```{r, eval = TRUE}
+knicks$twitter <- NA #making a new column of all NA values
+#for(i in 1:length(linkz)){ #normally, you would run this for loop, but for brevity I am running only the first 4 times through the loop
+  
+for(i in 1:4){
+  linkz[i] %>%
+    read_html() %>%
+    html_nodes("#meta") %>%
+    html_nodes("a") %>%
+    html_attr("href") -> temp #this is where the twitter account will be located 
+  #I will leave finding this as practice
+  
+  temp <- temp[grepl("twitter.com", temp)] #eliminate all of the links that do not contain "twitter.com"
+  
+  #if the player does not have a twitter account, we will have removed all links!
+  #use an if statement to be sure we are only replacing the NA in the table with a twitter account.
+  if(length(temp)>0){
+    
+    knicks$twitter[i] <- temp
+  }
+}
+head(knicks, 4)
+```
+</div>
+
+Now we have the 2019 roster with everyone's twitter accounts (if they have one).  Using this, you might want to scrape twitter or something for player news or something.
+
+## tryCatch - Error Handling
+
+Code breaks.  In my case, a lot.  When code breaks, the entire program ends.  Sometimes this is okay, but other times it isn't what we want.  If we can anticipate code breaking, we might just want R to skip these cases.  For example, suppose we are crawling over those twitter accounts.  If a player changes their handle and basketball-reference does not have a chance to update it, our code might fail.  To have R jump over this, we can use ```tryCatch()```.  Check out the following example.
+
+<div class="fold o">
+```{r, eval = TRUE, error = TRUE}
+"https://www.basketball-reference.com/teams/NYK/3019.html" %>%
+  read_html()
+
+tryCatch({
+  
+  "https://www.basketball-reference.com/teams/NYK/3019.html" %>%
+    read_html()
+}, error = function(e){
+  
+  print("404 error ... try again")
+})
+
+tryCatch({
+  
+  "https://www.basketball-reference.com/teams/NYK/2019.html" %>%
+    read_html()
+}, error = function(e){
+  
+  print("404 error ... try again")
+})
+```
+</div>
+
+
+## RSelenium - Notes
+
+* Sometimes, you cannot use ```read_html()``` due to the website being dynamic, and it is either too hard to crawl via ```session()``` or data is generated by JavaScript rather than those XHR files or GraphQL.  For these cases, there is a tool called RSelenium.
+* This package simulates a user experience by actually opening a browser, clicking and typing.
+* Setting this up is difficult, but it can be handy.
+* Personally, this is my last resort.  It is constantly being worked on and changed, so you will have to constantly adapt.
+
+## Scraping PDFs
+
+* There is a library called "pdftools"
+* There is a function called "pdf_text()"
+* It converts each page of the pdf into a SINGLE character element
+* [Example](https://official.nba.com/wp-content/uploads/sites/4/2017/04/L2M-LAC-UTA-04-23-17.pdf) of a PDF with enough of a "pattern" or "structure" to scrape
+* [Advice](https://thumbs.gfycat.com/ShowyPassionateAsianlion-size_restricted.gif): stay away!
+
+## Parallel Programming
+
+Suppose you need to scrape many many *many* pages.  Sometimes, we can speed things up by using parallel programming!
+
+```{r, eval = F}
+library("foreach")
+library("doParallel")
+
+corez <- detectCores() * 3 / 4; print(corez)
+yearz <- c(2010:2019)
+teamz <- c("NYK", "DAL", "LAL", "LAC", "BOS", "CHI")
+
+registerDoParallel(corez)
+foreach(tm = teamz,
+        .packages = c("rvest", "magrittr")) %dopar%
+{
+  
+  for(year in 2010:2019){
+    
+    paste0("https://www.basketball-reference.com/teams/",tm,"/",year,".html") %>%
+      read_html() %>%
+      write_html(paste0(tm, "_", year, ".html"))
+  }
+}
+
+closeAllConnections(); stopImplicitCluster()
+```
+
+# Homework
+
+* [Here](https://analytics.usa.gov/) is that USA analytics website again.  Find the top domains over the past 7 days and past 30 days.  Find the ratio between the two.
+* [Here](https://us-cert.cisa.gov/ncas/alerts) are the National Cyber Awareness Systems website.  For each year, for each alert, find the date of the event, title, link, and ID.
+* [Here](https://www.imdb.com/chart/top) are the top 250 movies according to IMDB.  Get the movie title, year, link, rating, *and number of people who reviewed*.
